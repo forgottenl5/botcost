@@ -1,0 +1,17 @@
+# Copy this file to wrangler.toml and fill in your own values.
+# wrangler.toml is git-ignored so your database ID stays out of the repo.
+
+name = "botcost-waitlist"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# Serve the Worker on the site's own domain instead of a *.workers.dev subdomain.
+workers_dev = false
+routes = [
+  { pattern = "botcost.dev/api/subscribe", zone_name = "botcost.dev" }
+]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "botcost"
+database_id = "<your-d1-database-id>"

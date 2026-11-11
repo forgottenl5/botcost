@@ -1,0 +1,832 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>BotCost.dev - AI Bot Log Analyzer</title>
+<meta name="description" content="Upload your server log and see exactly which AI bots are costing you money. Free, private, nothing uploaded. Supports Nginx, Apache, Cloudflare CSV, Vercel JSON.">
+<meta property="og:title" content="BotCost.dev - Free AI Bot Log Analyzer">
+<meta property="og:description" content="Drag and drop your server log. See which AI bots are hitting you and what it costs. Generate Cloudflare WAF rules instantly.">
+<meta property="og:url" content="https://botcost.dev/analyze.html">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="BotCost.dev - Free AI Bot Log Analyzer">
+<meta name="twitter:description" content="Upload your log file. See which AI bots are costing you money. Generate WAF rules instantly. Nothing uploaded.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080b0f;--surf:#0d1117;--surf2:#131920;--bdr:#1e2a38;
+  --red:#e63946;--redd:rgba(230,57,70,0.1);
+  --grn:#2ecc71;--grnd:rgba(46,204,113,0.1);
+  --amb:#f59e0b;--blu:#3b82f6;
+  --txt:#e8edf2;--mut:#5a7080;
+  --mono:'IBM Plex Mono',monospace;
+  --sans:'IBM Plex Sans',system-ui,sans-serif;
+}
+body{background:var(--bg);color:var(--txt);font-family:var(--sans);font-size:15px;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(30,42,56,.25) 1px,transparent 1px),linear-gradient(90deg,rgba(30,42,56,.25) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+.wrap{position:relative;z-index:1}
+nav{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid var(--bdr);background:rgba(8,11,15,.9);position:sticky;top:0;z-index:10;backdrop-filter:blur(10px)}
+.logo{font-family:var(--mono);font-size:14px;font-weight:600;letter-spacing:.05em;text-decoration:none;color:var(--txt)}
+.logo span{color:var(--red)}
+.badge{font-family:var(--mono);font-size:11px;background:var(--redd);border:1px solid rgba(230,57,70,.3);color:var(--red);padding:3px 10px;border-radius:4px}
+#app{min-height:calc(100vh - 120px)}
+footer{text-align:center;padding:20px;font-family:var(--mono);font-size:11px;color:var(--mut);border-top:1px solid var(--bdr);margin-top:40px}
+
+/* Drop zone */
+.drop-page{max-width:540px;margin:0 auto;padding:60px 20px 40px;text-align:center}
+.drop-lbl{font-family:var(--mono);font-size:11px;color:var(--mut);letter-spacing:.08em;margin-bottom:8px}
+.drop-page h1{font-size:26px;font-weight:600;letter-spacing:-.02em;margin-bottom:10px}
+.drop-page p{color:var(--mut);font-size:14px;line-height:1.6;margin-bottom:28px}
+.drop-box{border:2px dashed var(--bdr);border-radius:10px;padding:48px 28px;cursor:pointer;background:var(--surf);transition:all .2s;margin-bottom:14px}
+.drop-box:hover,.drop-box.drag{border-color:var(--red);background:var(--redd)}
+.drop-icon{font-size:32px;display:block;margin-bottom:12px}
+.drop-title{font-size:17px;font-weight:600;margin-bottom:5px}
+.drop-hint{color:var(--mut);font-size:13px}
+.fmts{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin-bottom:10px}
+.fmt{font-family:var(--mono);font-size:11px;background:var(--surf2);border:1px solid var(--bdr);color:var(--mut);padding:3px 8px;border-radius:3px}
+.privacy-note{color:var(--mut);font-size:12px;line-height:1.5;margin-bottom:28px}
+.demo-btn{background:transparent;color:var(--mut);border:1px solid var(--bdr);padding:8px 18px;font-family:var(--mono);font-size:12px;border-radius:5px;cursor:pointer}
+
+/* Progress */
+.prog-page{text-align:center;max-width:320px;margin:100px auto;padding:0 20px}
+.prog-lbl{font-family:var(--mono);font-size:12px;color:var(--mut);letter-spacing:.06em;margin-bottom:8px}
+.prog-bar{height:2px;background:var(--surf2);border-radius:2px;overflow:hidden;margin:14px auto;max-width:180px}
+.prog-fill{height:100%;background:var(--red);border-radius:2px;transition:width .35s ease}
+.prog-msg{font-family:var(--mono);font-size:12px;color:var(--mut)}
+
+/* Report */
+.report{max-width:860px;margin:0 auto;padding:28px 20px 60px}
+.hero{text-align:center;padding:36px 0 28px;border-bottom:1px solid var(--bdr);margin-bottom:28px}
+.hero-lbl{font-family:var(--mono);font-size:11px;color:var(--mut);letter-spacing:.1em;margin-bottom:8px}
+.hero-num{font-family:var(--mono);font-size:60px;font-weight:700;line-height:1;letter-spacing:-.04em;margin-bottom:6px}
+.hero-sub{color:var(--mut);font-size:13px}
+.hero-file{font-family:var(--mono);font-size:11px;color:var(--mut);margin-top:6px}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--bdr);border:1px solid var(--bdr);border-radius:8px;overflow:hidden;margin-bottom:24px}
+.stat{background:var(--surf);padding:18px 14px}
+.stat-n{font-family:var(--mono);font-size:22px;font-weight:700;display:block;margin-bottom:3px}
+.stat-l{font-size:11px;color:var(--mut);line-height:1.4}
+.sec-t{font-family:var(--mono);font-size:10px;color:var(--mut);letter-spacing:.1em;padding-bottom:8px;border-bottom:1px solid var(--bdr);margin-bottom:12px}
+.chart-wrap{background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:16px 12px;margin-bottom:24px}
+.chart-row{display:flex;align-items:center;gap:10px;margin-bottom:8px}
+.chart-lbl{font-family:var(--mono);font-size:11px;color:var(--mut);width:130px;flex-shrink:0;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.chart-bw{flex:1;background:var(--surf2);border-radius:3px;overflow:hidden;height:18px}
+.chart-b{height:100%;border-radius:3px;transition:width .5s ease}
+.chart-v{font-family:var(--mono);font-size:11px;color:var(--mut);width:50px;text-align:right;flex-shrink:0}
+.tbl-head,.tbl-row{display:grid;grid-template-columns:1fr 80px 90px 100px 65px;gap:8px;padding:8px 12px}
+.tbl-head{margin-bottom:4px}
+.tbl-hc{font-family:var(--mono);font-size:10px;color:var(--mut)}
+.tbl-row{align-items:center;background:var(--surf);border:1px solid var(--bdr);border-radius:5px;margin-bottom:4px}
+.tbl-row.top{background:rgba(230,57,70,.04);border-color:rgba(230,57,70,.2)}
+.bot-n{font-weight:500;font-size:13px}
+.bot-o{font-size:11px;color:var(--mut)}
+.cat-t{font-family:var(--mono);font-size:10px;padding:2px 5px;border-radius:3px;display:inline-block;margin-top:2px}
+.cat-training{background:var(--redd);color:var(--red)}
+.cat-seo{background:rgba(245,158,11,.1);color:var(--amb)}
+.cat-search,.cat-user-triggered{background:rgba(59,130,246,.1);color:var(--blu)}
+.t-stat{font-family:var(--mono);font-size:12px;text-align:right}
+.act-t{font-family:var(--mono);font-size:10px;padding:2px 6px;border-radius:3px}
+.act-block{background:var(--redd);color:var(--red)}
+.act-allow{background:var(--grnd);color:var(--grn)}
+.cost-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:24px}
+.cost-card{background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:18px}
+.cost-t{font-family:var(--mono);font-size:10px;color:var(--mut);letter-spacing:.08em;margin-bottom:10px}
+.cost-r{display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--bdr);font-size:12px}
+.cta-box{background:var(--surf);border:1px solid rgba(230,57,70,.25);border-radius:8px;padding:24px;text-align:center;margin-top:8px}
+.cta-t{font-size:18px;font-weight:600;margin-bottom:6px;letter-spacing:-.02em}
+.cta-s{color:var(--mut);font-size:13px;margin-bottom:18px;line-height:1.5}
+.btn-r{background:var(--red);color:#fff;border:none;padding:10px 22px;font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:.04em;border-radius:5px;cursor:pointer;margin-right:8px}
+.btn-g{background:transparent;color:var(--txt);border:1px solid var(--bdr);padding:10px 22px;font-family:var(--mono);font-size:12px;border-radius:5px;cursor:pointer}
+.waitlist-sec{background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:20px;text-align:center;margin-bottom:24px}
+.waitlist-sec p{color:var(--mut);font-size:13px;margin-bottom:14px}
+.email-row{display:flex;max-width:380px;margin:0 auto 10px;border:1px solid var(--bdr);border-radius:5px;overflow:hidden}
+.email-row input{flex:1;background:var(--surf2);border:none;outline:none;padding:10px 14px;font-family:var(--sans);font-size:14px;color:var(--txt)}
+.email-row input::placeholder{color:var(--mut)}
+.email-row button{background:var(--red);border:none;color:#fff;padding:10px 16px;font-family:var(--mono);font-size:12px;cursor:pointer;white-space:nowrap}
+.email-ok{display:none;font-family:var(--mono);font-size:12px;color:var(--grn);padding:8px;background:var(--grnd);border:1px solid rgba(46,204,113,.2);border-radius:4px;max-width:380px;margin:0 auto 10px;text-align:center}
+
+/* WAF screen */
+.waf-page{max-width:860px;margin:0 auto;padding:28px 20px 60px}
+.back-btn{background:none;border:none;color:var(--mut);font-family:var(--mono);font-size:12px;cursor:pointer;padding:0;margin-bottom:18px;display:block}
+.waf-t{font-size:24px;font-weight:600;letter-spacing:-.02em;margin-bottom:6px}
+.waf-s{color:var(--mut);font-size:13px;line-height:1.6;margin-bottom:22px}
+.chips-box{background:var(--surf);border:1px solid var(--bdr);border-radius:8px;padding:16px;margin-bottom:20px}
+.chips-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+.chips-lbl{font-family:var(--mono);font-size:11px;color:var(--mut);letter-spacing:.08em}
+.chips-tog{display:flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;color:var(--mut);cursor:pointer}
+.chips-wrap{display:flex;flex-wrap:wrap;gap:5px}
+.chip{font-family:var(--mono);font-size:11px;padding:2px 8px;border-radius:3px;background:rgba(230,57,70,.08);border:1px solid rgba(230,57,70,.2);color:var(--red)}
+.extra-n{font-size:12px;color:var(--mut);margin-top:8px}
+.extra-l{background:none;border:none;color:var(--blu);cursor:pointer;font-family:var(--mono);font-size:12px;margin-left:6px}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-bottom:-1px;position:relative;z-index:2}
+.tab-btn{font-family:var(--mono);font-size:12px;padding:7px 12px;border:1px solid var(--bdr);border-radius:5px 5px 0 0;background:var(--surf2);color:var(--mut);cursor:pointer}
+.tab-btn.active{border-color:rgba(230,57,70,.4);border-bottom-color:var(--surf);background:var(--surf);color:var(--txt);position:relative;z-index:3}
+.code-box{background:#050709;border:1px solid var(--bdr);border-radius:0 5px 5px 5px;overflow:hidden;margin-bottom:16px;position:relative;z-index:1}
+.code-bar{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;background:var(--surf);border-bottom:1px solid var(--bdr)}
+.code-note{font-family:var(--mono);font-size:11px;color:var(--mut)}
+.copy-btn{font-family:var(--mono);font-size:11px;background:rgba(255,255,255,.05);border:1px solid var(--bdr);color:var(--mut);padding:3px 10px;border-radius:3px;cursor:pointer}
+.copy-btn.ok{background:rgba(46,204,113,.12);border-color:rgba(46,204,113,.3);color:var(--grn)}
+.code-box pre{margin:0;padding:16px 20px;font-family:var(--mono);font-size:12px;line-height:1.7;color:#c9d1d9;overflow-x:auto;white-space:pre-wrap;word-break:break-word;max-height:380px;overflow-y:auto}
+.note-a{font-size:12px;padding:10px 14px;border-radius:5px;margin-bottom:14px;line-height:1.5;color:var(--amb);background:rgba(245,158,11,.05);border:1px solid rgba(245,158,11,.2)}
+.note-b{font-size:12px;padding:10px 14px;border-radius:5px;margin-bottom:14px;line-height:1.5;color:var(--blu);background:rgba(59,130,246,.05);border:1px solid rgba(59,130,246,.2)}
+.done-box{background:var(--surf);border:1px solid rgba(46,204,113,.2);border-radius:8px;padding:24px;text-align:center;margin-top:8px}
+
+/* Error */
+.err-page{text-align:center;max-width:380px;margin:80px auto;padding:0 20px}
+.err-lbl{color:var(--red);font-family:var(--mono);font-size:12px;margin-bottom:8px}
+.err-msg{color:var(--mut);margin-bottom:20px;font-size:13px;line-height:1.5}
+
+@media(max-width:640px){
+  .stats-row{grid-template-columns:1fr 1fr}
+  .tbl-head,.tbl-row{grid-template-columns:1fr 70px 80px}
+  .tbl-head .h3,.tbl-head .h4,.tbl-row .c3,.tbl-row .c4{display:none}
+  .cost-grid{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<nav>
+  <span class="logo">BotCost<span>.</span>dev</span>
+  <span class="badge">FREE ANALYZER</span>
+</nav>
+<div id="app"></div>
+<footer>BotCost.dev &mdash; Zero data uploaded &middot; Everything runs in your browser &middot; &copy; 2026</footer>
+</div>
+
+<script>
+var BOTS = [
+  {id:"gptbot",      name:"GPTBot",           owner:"OpenAI",        category:"training",      ua:"GPTBot",           rbx:"GPTBot",           ips:["132.196.86.0/24","172.182.202.0/25","172.182.204.0/24","172.182.207.0/25","172.182.214.0/24","172.182.215.0/24","20.125.66.80/28","20.171.206.0/24","20.171.207.0/24","4.227.36.0/25","52.230.152.0/24","74.7.175.128/25","74.7.227.0/25","74.7.227.128/25","74.7.228.0/25","74.7.230.0/25","74.7.241.0/25","74.7.241.128/25","74.7.242.0/25","74.7.243.128/25","74.7.244.0/25"], action:"block",  dep:[]},
+  {id:"claudebot",   name:"ClaudeBot",         owner:"Anthropic",     category:"training",      ua:"ClaudeBot",        rbx:"ClaudeBot",        ips:[], action:"block",  dep:["Claude-Web","Anthropic-AI","anthropic-ai"]},
+  {id:"ccbot",       name:"CCBot",             owner:"Common Crawl",  category:"training",      ua:"CCBot",            rbx:"CCBot",            ips:[], action:"block",  dep:[]},
+  {id:"bytespider",  name:"Bytespider",        owner:"ByteDance",     category:"training",      ua:"Bytespider",       rbx:"Bytespider",       ips:[], action:"block",  dep:[]},
+  {id:"meta-ext",    name:"Meta-ExternalAgent",owner:"Meta",          category:"training",      ua:"meta-externalagent",rbx:"meta-externalagent",ips:[], action:"block", dep:[]},
+  {id:"google-ext",  name:"Google-Extended",   owner:"Google",        category:"training",      ua:"Google-Extended",  rbx:"Google-Extended",  ips:[], action:"block",  dep:[]},
+  {id:"googleother", name:"GoogleOther",       owner:"Google",        category:"training",      ua:"GoogleOther",      rbx:"GoogleOther",      ips:[], action:"block",  dep:[]},
+  {id:"amazonbot",   name:"Amazonbot",         owner:"Amazon",        category:"training",      ua:"Amazonbot",        rbx:"Amazonbot",        ips:[], action:"block",  dep:[]},
+  {id:"diffbot",     name:"Diffbot",           owner:"Diffbot",       category:"training",      ua:"Diffbot",          rbx:"Diffbot",          ips:[], action:"block",  dep:[]},
+  {id:"cohere",      name:"cohere-ai",         owner:"Cohere",        category:"training",      ua:"cohere-ai",        rbx:"cohere-ai",        ips:[], action:"block",  dep:[]},
+  {id:"ahrefsbot",   name:"AhrefsBot",         owner:"Ahrefs",        category:"seo",           ua:"AhrefsBot",        rbx:"AhrefsBot",        ips:[], action:"block",  dep:[]},
+  {id:"semrush",     name:"SemrushBot",        owner:"Semrush",       category:"seo",           ua:"SemrushBot",       rbx:"SemrushBot",       ips:[], action:"block",  dep:[]},
+  {id:"oai-search",  name:"OAI-SearchBot",     owner:"OpenAI",        category:"search",        ua:"OAI-SearchBot",    rbx:"OAI-SearchBot",    ips:[], action:"allow",  dep:[]},
+  {id:"chatgpt-u",   name:"ChatGPT-User",      owner:"OpenAI",        category:"user-triggered",ua:"ChatGPT-User",     rbx:"ChatGPT-User",     ips:[], action:"allow",  dep:[]},
+  {id:"perplexity",  name:"PerplexityBot",     owner:"Perplexity AI", category:"search",        ua:"PerplexityBot",    rbx:"PerplexityBot",    ips:[], action:"allow",  dep:[]},
+  {id:"claude-s",    name:"Claude-SearchBot",  owner:"Anthropic",     category:"search",        ua:"Claude-SearchBot", rbx:"Claude-SearchBot", ips:[], action:"allow",  dep:[]},
+  {id:"claude-u",    name:"Claude-User",       owner:"Anthropic",     category:"user-triggered",ua:"Claude-User",      rbx:"Claude-User",      ips:[], action:"allow",  dep:[]},
+  {id:"applebot-ext", name:"Applebot-Extended", owner:"Apple",         category:"training",      ua:"Applebot-Extended", rbx:"Applebot-Extended", ips:[], action:"block", dep:[]},
+  {id:"perp-u",      name:"Perplexity-User",   owner:"Perplexity AI", category:"user-triggered",ua:"Perplexity-User",  rbx:"Perplexity-User",  ips:[], action:"allow",  dep:[]}
+];
+
+// ===== PARSER =====
+var MONTHS = {Jan:"01",Feb:"02",Mar:"03",Apr:"04",May:"05",Jun:"06",Jul:"07",Aug:"08",Sep:"09",Oct:"10",Nov:"11",Dec:"12"};
+
+function parseNginxDate(s) {
+  try {
+    var m = /(\d{2})\/(\w{3})\/(\d{4}):(\d{2}:\d{2}:\d{2}) ([+-]\d{4})/.exec(s);
+    if (!m) return null;
+    var d = new Date(m[3]+"-"+MONTHS[m[2]]+"-"+m[1]+"T"+m[4]+m[5].slice(0,3)+":"+m[5].slice(3));
+    return isNaN(d.getTime()) ? null : d;
+  } catch(e) { return null; }
+}
+
+var NREG = /^(\S+) \S+ \S+ \[([^\]]+)\] "([A-Z]+) ([^ "]+)[^"]*" (\d{3}) (\d+|-) "([^"]*)" "([^"]*)"/;
+
+function parseNginxLine(line) {
+  var m = NREG.exec(line);
+  if (!m) return null;
+  return {ip:m[1], ts:parseNginxDate(m[2]), method:m[3], path:m[4], st:parseInt(m[5]), by:m[6]==="-"?0:parseInt(m[6]), ua:m[8], ref:m[7]==="-"?"":m[7]};
+}
+
+function parseCsvRow(line) {
+  var result = [], cur = "", inQ = false;
+  for (var i = 0; i < line.length; i++) {
+    var ch = line[i];
+    if (ch === '"') {
+      if (inQ && line[i+1] === '"') { cur += '"'; i++; }
+      else inQ = !inQ;
+    } else if (ch === ',' && !inQ) { result.push(cur); cur = ""; }
+    else cur += ch;
+  }
+  result.push(cur);
+  return result;
+}
+
+function makeCsvParser() {
+  var headers = [], done = false;
+  return function(line) {
+    var cols = parseCsvRow(line);
+    if (!done) { headers = cols.map(function(h){return h.toLowerCase().trim();}); done = true; return null; }
+    if (cols.length < headers.length) return null;
+    function g(k) { var i = headers.indexOf(k.toLowerCase()); return i >= 0 ? cols[i].trim() : ""; }
+    var ip = g("clientip"), ua = g("clientrequestuseragent"), path = g("clientrequesturi") || "/";
+    var method = g("clientrequestmethod") || "GET", st = g("edgeresponsestatus");
+    var by = g("edgeresponsebytes"), ts = g("edgestarttimestamp");
+    if (!ua && !ip) return null;
+    return {ip:ip, ts:ts?new Date(ts):null, method:method, path:path, st:parseInt(st)||0, by:parseInt(by)||0, ua:ua, ref:""};
+  };
+}
+
+function parseVercelLine(line) {
+  var o;
+  try { o = JSON.parse(line); } catch(e) { return null; }
+  if (o && o.proxy) {
+    var p = o.proxy;
+    var ua = Array.isArray(p.userAgent) ? p.userAgent[0] : (p.userAgent || "");
+    return {ip:p.clientIp||"", ts:p.timestamp?new Date(p.timestamp):null, method:p.method||"GET", path:p.path||"/", st:p.statusCode||0, by:p.responseBodySize||0, ua:ua, ref:""};
+  }
+  if (o && (o.method || o.path)) {
+    var ua2 = Array.isArray(o.userAgent) ? o.userAgent[0] : (o.userAgent || "");
+    return {ip:o.clientIp||"", ts:o.timestamp?new Date(o.timestamp):null, method:o.method||"GET", path:o.path||"/", st:o.statusCode||0, by:o.bytes||0, ua:ua2, ref:""};
+  }
+  return null;
+}
+
+function detectFmt(lines) {
+  var s = lines.filter(function(l){return !l.startsWith("#");}).slice(0, 5);
+  if (!s.length) return "unknown";
+  if (s[0].trimLeft().charAt(0) === "{") {
+    try {
+      var p = JSON.parse(s[0]);
+      if (p && (p.proxy || p.userAgent || p.source === "lambda" || p.method)) return "vercel";
+    } catch(e) {}
+  }
+  var f = s[0].toLowerCase();
+  if (f.charAt(0) !== "{" && f.indexOf(",") >= 0 && (f.indexOf("clientip") >= 0 || f.indexOf("clientrequestuseragent") >= 0)) return "cf-csv";
+  if (NREG.test(s[0])) return "nginx";
+  return "unknown";
+}
+
+function parseLog(txt) {
+  var lines = txt.split("\n").map(function(l){return l.trim();}).filter(function(l){return l.length > 0;});
+  var fmt = detectFmt(lines);
+  var parser = fmt === "cf-csv" ? makeCsvParser() : fmt === "vercel" ? parseVercelLine : parseNginxLine;
+  var entries = [];
+  for (var i = 0; i < lines.length; i++) {
+    if (lines[i].charAt(0) === "#") continue;
+    try { var e = parser(lines[i]); if (e) entries.push(e); } catch(err) {}
+  }
+  return {fmt:fmt, entries:entries};
+}
+
+// ===== MATCHER =====
+function ip2n(ip) {
+  var p = ip.split(".");
+  if (p.length !== 4) return null;
+  var n = p.map(Number);
+  if (n.some(function(x){return isNaN(x)||x<0||x>255;})) return null;
+  return ((n[0]<<24)|(n[1]<<16)|(n[2]<<8)|n[3])>>>0;
+}
+
+function inCidr(ipn, cidr) {
+  var parts = cidr.split("/");
+  var pr = parseInt(parts[1]);
+  if (isNaN(pr) || pr < 0 || pr > 32) return false;
+  var bn = ip2n(parts[0]);
+  if (bn === null) return false;
+  var mask = pr === 0 ? 0 : (~0 << (32 - pr)) >>> 0;
+  return (ipn & mask) === (bn & mask);
+}
+
+function matchUA(ua, bot) {
+  if (ua.indexOf(bot.ua.toLowerCase()) >= 0) return true;
+  for (var i = 0; i < bot.dep.length; i++) {
+    if (ua.indexOf(bot.dep[i].toLowerCase()) >= 0) return true;
+  }
+  return false;
+}
+
+function matchIP(ip, ips) {
+  if (!ips || !ips.length || ip.indexOf(":") >= 0) return false;
+  var n = ip2n(ip);
+  if (n === null) return false;
+  for (var i = 0; i < ips.length; i++) {
+    if (inCidr(n, ips[i])) return true;
+  }
+  return false;
+}
+
+function analyze(entries) {
+  var map = {}, botBytes = 0, allBytes = 0, tsList = [];
+  for (var i = 0; i < entries.length; i++) {
+    var e = entries[i];
+    allBytes += e.by;
+    var ua = e.ua.toLowerCase();
+    var matched = false;
+    for (var j = 0; j < BOTS.length; j++) {
+      var bot = BOTS[j];
+      if (matchUA(ua, bot) || (e.ip && matchIP(e.ip, bot.ips))) {
+        if (e.ts) tsList.push(e.ts);
+        botBytes += e.by;
+        if (!map[bot.id]) map[bot.id] = {bot:bot, req:0, bytes:0, paths:[]};
+        map[bot.id].req++;
+        map[bot.id].bytes += e.by;
+        if (e.path && map[bot.id].paths.length < 5 && map[bot.id].paths.indexOf(e.path) < 0) {
+          map[bot.id].paths.push(e.path);
+        }
+        matched = true;
+        break;
+      }
+    }
+  }
+  var breakdown = [];
+  for (var k in map) { if (map.hasOwnProperty(k)) breakdown.push(map[k]); }
+  breakdown.sort(function(a, b){ return b.req - a.req; });
+  var periodDays = 30;
+  if (tsList.length >= 2) {
+    var mn = tsList.reduce(function(m,t){return Math.min(m,t.getTime());}, Infinity);
+    var mx = tsList.reduce(function(m,t){return Math.max(m,t.getTime());}, -Infinity);
+    periodDays = Math.max(Math.round((mx - mn) / 864e5), 1);
+  }
+  var botReq = breakdown.reduce(function(s,b){return s+b.req;}, 0);
+  var pct = entries.length > 0 ? Math.round(botReq / entries.length * 100) : 0;
+  return {total:entries.length, botReq:botReq, humanReq:entries.length-botReq, pct:pct, botBytes:botBytes, allBytes:allBytes, breakdown:breakdown, periodDays:periodDays};
+}
+
+// ===== ESTIMATOR =====
+var GBC = 1073741824;
+
+function calcCost(r) {
+  var mult = 30 / r.periodDays;
+  var bw = r.botBytes / GBC * 0.09;
+  var cp = r.botReq / 1e6 * 0.4;
+  var perBot = r.breakdown.map(function(b) {
+    var bwb = b.bytes / GBC * 0.09;
+    var cpb = b.req / 1e6 * 0.4;
+    return {bot:b.bot, req:b.req, bytes:b.bytes, monthly: rnd((bwb + cpb) * mult)};
+  });
+  perBot.sort(function(a,b){return b.monthly - a.monthly;});
+  return {period:rnd(bw+cp), monthly:rnd((bw+cp)*mult), annual:rnd((bw+cp)*mult*12), perBot:perBot};
+}
+
+function rnd(n) { return Math.round(n * 100) / 100; }
+
+function fc(d) {
+  if (d < 0.01) return "<$0.01";
+  if (d < 1000) return "$" + d.toFixed(2);
+  return "$" + d.toLocaleString("en-US", {minimumFractionDigits:2});
+}
+
+function fb(b) {
+  if (b < 1024) return b + " B";
+  if (b < 1048576) return (b/1024).toFixed(1) + " KB";
+  if (b < 1073741824) return (b/1048576).toFixed(1) + " MB";
+  return (b/1073741824).toFixed(2) + " GB";
+}
+
+function fr(n) {
+  if (n < 1000) return "" + n;
+  if (n < 1e6) return (n/1000).toFixed(1) + "k";
+  return (n/1e6).toFixed(2) + "M";
+}
+
+// ===== WAF GENERATOR =====
+function genRules(bots) {
+  var today = new Date().toISOString().slice(0, 10);
+  var tokens = bots.map(function(b){return b.ua;});
+  var allIPs = [];
+  bots.forEach(function(b){ b.ips.forEach(function(ip){allIPs.push(ip);}); });
+
+  var cfParts = tokens.map(function(t){return '(http.user_agent contains "' + t + '")';});
+  if (allIPs.length) cfParts.push('(ip.src in {' + allIPs.join(" ") + '})');
+  var cfFree = cfParts.join("\nor ");
+
+  var byCat = {};
+  bots.forEach(function(b){
+    if (!byCat[b.category]) byCat[b.category] = [];
+    byCat[b.category].push(b);
+  });
+  var cfProParts = [];
+  for (var cat in byCat) {
+    if (byCat.hasOwnProperty(cat)) {
+      var expr = byCat[cat].map(function(b){return '(http.user_agent contains "' + b.ua + '")';}).join("\nor ");
+      cfProParts.push("# Block " + cat + " bots\n" + expr);
+    }
+  }
+  var cfPro = cfProParts.join("\n\n");
+
+  var nginxLines = tokens.map(function(t){return '    "~*' + t + '"  1;';}).join("\n");
+  var nginx = "# BotCost Bot Blocker - generated " + today + "\n"
+    + "# Add inside your nginx.conf http {} block\n\n"
+    + "map $http_user_agent $botcost_bot {\n"
+    + "    default  0;\n"
+    + nginxLines + "\n"
+    + "}\n\n"
+    + "# Then inside server {} -> location / {}:\n"
+    + "if ($botcost_bot) {\n"
+    + "    return 403;\n"
+    + "}";
+
+  var nxTokens = tokens.map(function(t){return "  '" + t + "',";}).join("\n");
+  var nextjs = "// middleware.ts - place in project root\n"
+    + "// Generated by botcost.dev on " + today + "\n"
+    + "import { NextResponse } from 'next/server'\n\n"
+    + "const BLOCKED_TOKENS = [\n"
+    + nxTokens + "\n"
+    + "]\n\n"
+    + "export function middleware(req) {\n"
+    + "  const ua = req.headers.get('user-agent') || ''\n"
+    + "  if (BLOCKED_TOKENS.some(function(t) {\n"
+    + "    return ua.toLowerCase().indexOf(t.toLowerCase()) >= 0\n"
+    + "  })) {\n"
+    + "    return new NextResponse('Forbidden', { status: 403 })\n"
+    + "  }\n"
+    + "  return NextResponse.next()\n"
+    + "}\n\n"
+    + "export const config = {\n"
+    + "  matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],\n"
+    + "}";
+
+  var rbLines = bots.map(function(b){return "User-agent: " + b.rbx + "\nDisallow: /";}).join("\n\n");
+  var robots = "# robots.txt - generated by botcost.dev on " + today + "\n"
+    + "# Advisory only - some bots ignore this\n\n"
+    + rbLines;
+
+  return {cfFree:cfFree, cfPro:cfPro, nginx:nginx, nextjs:nextjs, robots:robots};
+}
+
+// ===== DEMO LOG =====
+function demoLog() {
+  var pairs = [
+    ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)", 180],
+    ["Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; ClaudeBot/1.0; +claudebot@anthropic.com)", 94],
+    ["CCBot/2.0 (https://commoncrawl.org/faq/)", 61],
+    ["Mozilla/5.0 (Linux; Android 5.0) AppleWebKit/537.36 (compatible; Bytespider; spider-feedback@bytedance.com)", 45],
+    ["Mozilla/5.0 (compatible; SemrushBot/7~bl; +http://www.semrush.com/bot.html)", 38],
+    ["Mozilla/5.0 (compatible; AhrefsBot/7.0; +http://ahrefs.com/robot/)", 29],
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36", 300],
+    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Safari/537.36", 200]
+  ];
+  var ips = ["66.249.66.1","74.7.175.130","1.2.3.4","5.6.7.8","9.10.11.12","34.90.100.1"];
+  var paths = ["/","index.html","/blog","/api","/products","/about"];
+  var lines = [], day = 1;
+  pairs.forEach(function(pair) {
+    var ua = pair[0], count = pair[1];
+    for (var i = 0; i < count; i++) {
+      var ip = ips[Math.floor(Math.random() * ips.length)];
+      var path = paths[Math.floor(Math.random() * paths.length)];
+      var by = Math.floor(Math.random() * 8000) + 500;
+      var d = ("0" + day).slice(-2);
+      day = (day % 28) + 1;
+      lines.push(ip + ' - - [' + d + '/Jan/2024:12:00:00 +0000] "GET /' + path + ' HTTP/1.1" 200 ' + by + ' "-" "' + ua + '"');
+    }
+  });
+  lines.sort(function(){return Math.random() - 0.5;});
+  return lines.join("\n");
+}
+
+// ===== CONFIG =====
+// Same-origin endpoint served by the waitlist Worker (see worker.js / wrangler.toml.example)
+var WAITLIST_ENDPOINT = "/api/subscribe";
+
+// ===== STATE =====
+var phase = "idle";
+var result = null;
+var wafAll = false;
+var wafPlat = "cfFree";
+var errMsg = "";
+
+// ===== HELPERS =====
+function eid(id) { return document.getElementById(id); }
+
+function esc(s) {
+  return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+}
+
+function render() {
+  var app = eid("app");
+  if (!app) return;
+  switch (phase) {
+    case "idle":    app.innerHTML = tplDrop();    break;
+    case "parsing": app.innerHTML = tplProgress(); break;
+    case "report":  app.innerHTML = tplReport();  break;
+    case "waf":     app.innerHTML = tplWaf();     break;
+    case "error":   app.innerHTML = tplError();   break;
+  }
+  bind();
+}
+
+function bind() {
+  var db = eid("drop-box");
+  if (db) {
+    db.addEventListener("dragover", function(e){e.preventDefault(); db.classList.add("drag");});
+    db.addEventListener("dragleave", function(){db.classList.remove("drag");});
+    db.addEventListener("drop", function(e){
+      e.preventDefault(); db.classList.remove("drag");
+      var f = e.dataTransfer.files[0];
+      if (f) processFile(f);
+    });
+    db.addEventListener("click", function(){ var fi = eid("fi"); if(fi) fi.click(); });
+  }
+  var fi = eid("fi");
+  if (fi) fi.addEventListener("change", function(e){ if(e.target.files[0]) processFile(e.target.files[0]); });
+
+  var demoBtn = eid("demo-btn");
+  if (demoBtn) demoBtn.addEventListener("click", function(){ runAnalysis(demoLog(), "demo-access.log"); });
+
+  var backBtn = eid("back-btn");
+  if (backBtn) backBtn.addEventListener("click", function(){ phase = "report"; render(); });
+
+  var wafBtn = eid("waf-btn");
+  if (wafBtn) wafBtn.addEventListener("click", function(){ phase = "waf"; render(); });
+
+  var resetBtn = eid("reset-btn");
+  if (resetBtn) resetBtn.addEventListener("click", function(){ phase = "idle"; result = null; render(); });
+
+  var resetBtn2 = eid("reset-btn2");
+  if (resetBtn2) resetBtn2.addEventListener("click", function(){ phase = "idle"; result = null; render(); });
+
+  var copyBtn = eid("copy-btn");
+  if (copyBtn) copyBtn.addEventListener("click", doCopy);
+
+  var toggle = eid("include-all");
+  if (toggle) {
+    toggle.checked = wafAll;
+    toggle.addEventListener("change", function(e){ wafAll = e.target.checked; render(); });
+  }
+
+  var addAll = eid("add-all");
+  if (addAll) addAll.addEventListener("click", function(){ wafAll = true; render(); });
+
+  var tabs = document.querySelectorAll(".tab-btn");
+  for (var i = 0; i < tabs.length; i++) {
+    (function(btn){
+      btn.addEventListener("click", function(){ wafPlat = btn.getAttribute("data-plat"); render(); });
+    })(tabs[i]);
+  }
+
+  var emailForm = eid("email-form");
+  if (emailForm) {
+    emailForm.addEventListener("submit", function(e) {
+      e.preventDefault();
+      var input = eid("email-input");
+      if (!input || !input.value || input.value.indexOf("@") < 0) return;
+
+      var email = input.value;
+      var btn = emailForm.querySelector("button");
+      if (btn) btn.textContent = "Saving...";
+
+      fetch(WAITLIST_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email })
+      })
+      .then(function(res) { if (!res.ok) throw new Error("save failed"); return res.json(); })
+      .then(function(data) {
+        emailForm.style.display = "none";
+        var ok = eid("email-ok");
+        if (ok) ok.style.display = "block";
+      })
+      .catch(function(err) {
+        if (btn) btn.textContent = "Try again";
+      });
+    });
+  }
+}
+
+function processFile(f) {
+  var MAX = 50 * 1024 * 1024;
+  if (f.size > MAX) {
+    errMsg = "File too large (" + (f.size/1048576).toFixed(1) + "MB). Maximum is 50MB.";
+    phase = "error"; render(); return;
+  }
+  var reader = new FileReader();
+  reader.onload = function(e){ runAnalysis(e.target.result, f.name); };
+  reader.readAsText(f);
+}
+
+function runAnalysis(txt, name) {
+  phase = "parsing"; render();
+  setTimeout(function() {
+    try {
+      var parsed = parseLog(txt);
+      var anal = analyze(parsed.entries);
+      var cost = calcCost(anal);
+      result = {anal:anal, cost:cost, name:name};
+      phase = "report"; render();
+    } catch(e) {
+      errMsg = String(e).slice(0, 120);
+      phase = "error"; render();
+    }
+  }, 60);
+}
+
+function doCopy() {
+  var pre = eid("code-pre");
+  if (!pre) return;
+  var txt = pre.textContent;
+  var btn = eid("copy-btn");
+  function showOk() {
+    if (btn) { btn.textContent = "Copied!"; btn.classList.add("ok"); setTimeout(function(){ btn.textContent = "Copy"; btn.classList.remove("ok"); }, 2000); }
+  }
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(txt).then(showOk);
+  } else {
+    var el = document.createElement("textarea");
+    el.value = txt; el.style.position = "fixed"; el.style.opacity = "0";
+    document.body.appendChild(el); el.select();
+    try { document.execCommand("copy"); showOk(); } catch(e) {}
+    document.body.removeChild(el);
+  }
+}
+
+// ===== TEMPLATES =====
+function tplDrop() {
+  return '<div class="drop-page">'
+    + '<div class="drop-lbl">BOTCOST.DEV - FREE TOOL</div>'
+    + '<h1>Which AI bots are eating your bandwidth?</h1>'
+    + '<p>Upload your server log and see exactly which AI bots are costing you money. Everything runs in your browser. Nothing is uploaded.</p>'
+    + '<div class="drop-box" id="drop-box">'
+    + '<span class="drop-icon">&#8593;</span>'
+    + '<div class="drop-title">Drag &amp; drop your log file</div>'
+    + '<div class="drop-hint">or click to browse &middot; up to 50MB</div>'
+    + '<input type="file" id="fi" accept=".log,.txt,.csv,.json" style="display:none"/>'
+    + '</div>'
+    + '<div class="fmts"><span class="fmt">Nginx</span><span class="fmt">Apache</span><span class="fmt">Cloudflare CSV</span><span class="fmt">Vercel JSON</span></div>'
+    + '<p class="privacy-note">&#128274; Your log file never leaves your browser. All analysis is 100% local. No account required.</p>'
+    + '<p style="font-family:\'IBM Plex Mono\',monospace;font-size:12px;color:#5a7080;margin-bottom:10px">No log file handy?</p>'
+    + '<button class="demo-btn" id="demo-btn" style="background:transparent;color:#e8edf2;border:1px solid #3b82f6;padding:10px 20px;font-family:\'IBM Plex Mono\',monospace;font-size:13px;border-radius:5px;cursor:pointer;margin-bottom:8px">&#9654; Try with sample log — no upload needed</button>'
+    + '</div>';
+}
+
+function tplProgress() {
+  return '<div class="prog-page">'
+    + '<div class="prog-lbl">ANALYZING</div>'
+    + '<div class="prog-bar"><div class="prog-fill" style="width:65%"></div></div>'
+    + '<div class="prog-msg">Matching against bot database...</div>'
+    + '</div>';
+}
+
+function tplReport() {
+  var anal = result.anal, cost = result.cost, name = result.name;
+  var noBots = anal.botReq === 0;
+  var maxReq = anal.breakdown.length ? anal.breakdown[0].req : 1;
+
+  function catColor(c) {
+    if (c === "training") return "var(--red)";
+    if (c === "seo") return "var(--amb)";
+    return "var(--blu)";
+  }
+
+  var statsHtml = '<div class="stats-row">'
+    + '<div class="stat"><span class="stat-n" style="color:var(--txt)">' + fr(anal.total) + '</span><span class="stat-l">Total requests</span></div>'
+    + '<div class="stat"><span class="stat-n" style="color:' + (anal.pct>30?"var(--red)":"var(--amb)") + '">' + anal.pct + '%</span><span class="stat-l">Bot traffic</span></div>'
+    + '<div class="stat"><span class="stat-n" style="color:var(--red)">' + fb(anal.botBytes) + '</span><span class="stat-l">Bandwidth wasted</span></div>'
+    + '<div class="stat"><span class="stat-n" style="color:var(--grn)">' + fr(anal.humanReq) + '</span><span class="stat-l">Human requests</span></div>'
+    + '</div>';
+
+  var chartHtml = "";
+  if (anal.breakdown.length) {
+    chartHtml = '<div class="sec-t">BOT TRAFFIC BREAKDOWN</div><div class="chart-wrap">';
+    anal.breakdown.slice(0, 8).forEach(function(b) {
+      var pct = Math.round(b.req / maxReq * 100);
+      chartHtml += '<div class="chart-row">'
+        + '<div class="chart-lbl">' + esc(b.bot.name) + '</div>'
+        + '<div class="chart-bw"><div class="chart-b" style="width:' + pct + '%;background:' + catColor(b.bot.category) + '"></div></div>'
+        + '<div class="chart-v">' + fr(b.req) + '</div>'
+        + '</div>';
+    });
+    chartHtml += '</div>';
+  }
+
+  var tblHtml = "";
+  if (anal.breakdown.length) {
+    tblHtml = '<div class="sec-t">DETAILED BREAKDOWN</div>'
+      + '<div class="tbl-head">'
+      + '<div class="tbl-hc">BOT</div>'
+      + '<div class="tbl-hc h2" style="text-align:right">REQUESTS</div>'
+      + '<div class="tbl-hc h3" style="text-align:right">BANDWIDTH</div>'
+      + '<div class="tbl-hc h4" style="text-align:right">MONTHLY</div>'
+      + '<div class="tbl-hc" style="text-align:right">ACTION</div>'
+      + '</div>';
+    anal.breakdown.forEach(function(b, i) {
+      var cp = cost.perBot.filter(function(p){return p.bot.id === b.bot.id;})[0];
+      tblHtml += '<div class="tbl-row' + (i===0?" top":"") + '">'
+        + '<div><div class="bot-n">' + esc(b.bot.name) + '</div><div class="bot-o">' + esc(b.bot.owner) + '</div>'
+        + '<span class="cat-t cat-' + b.bot.category + '">' + b.bot.category + '</span></div>'
+        + '<div class="t-stat">' + fr(b.req) + '</div>'
+        + '<div class="t-stat c3" style="color:var(--mut)">' + fb(b.bytes) + '</div>'
+        + '<div class="t-stat c4" style="color:' + (cp&&cp.monthly>0?"var(--red)":"var(--mut)") + '">' + (cp?fc(cp.monthly):"<$0.01") + '</div>'
+        + '<div style="text-align:right"><span class="act-t act-' + b.bot.action + '">' + b.bot.action.toUpperCase() + '</span></div>'
+        + '</div>';
+    });
+  }
+
+  var costHtml = "";
+  if (!noBots) {
+    var bwP = anal.botBytes / GBC * 0.09;
+    var cpP = anal.botReq / 1e6 * 0.4;
+    costHtml = '<div class="cost-grid">'
+      + '<div class="cost-card"><div class="cost-t">THIS PERIOD (' + anal.periodDays + ' days)</div>'
+      + '<div class="cost-r"><span style="color:var(--mut)">Bandwidth</span><span style="font-family:var(--mono)">' + fc(bwP) + '</span></div>'
+      + '<div class="cost-r"><span style="color:var(--mut)">Compute</span><span style="font-family:var(--mono)">' + fc(cpP) + '</span></div>'
+      + '<div class="cost-r"><span style="color:var(--mut)">Total</span><span style="font-family:var(--mono)">' + fc(cost.period) + '</span></div>'
+      + '</div>'
+      + '<div class="cost-card"><div class="cost-t">PROJECTED</div>'
+      + '<div class="cost-r"><span style="color:var(--mut)">Monthly</span><span style="font-family:var(--mono);color:var(--red)">' + fc(cost.monthly) + '</span></div>'
+      + '<div class="cost-r"><span style="color:var(--mut)">Annual</span><span style="font-family:var(--mono);color:var(--red)">' + fc(cost.annual) + '</span></div>'
+      + '<div class="cost-r"><span style="color:var(--mut)">3 Years</span><span style="font-family:var(--mono);color:var(--red)">' + fc(cost.annual * 3) + '</span></div>'
+      + '</div>'
+      + '</div>';
+  }
+
+  var waitlistHtml = !noBots ? '<div class="waitlist-sec">'
+    + '<div class="sec-t">Get notified about updates</div>'
+    + '<p>Leave your email and we&rsquo;ll let you know when we add new bots or features.</p>'
+    + '<form id="email-form"><div class="email-row"><input id="email-input" type="email" placeholder="your@email.com"/><button type="submit">NOTIFY ME</button></div></form>'
+    + '<div class="email-ok" id="email-ok">Thanks, you&rsquo;re on the list.</div>'
+    + '<div style="font-family:var(--mono);font-size:11px;color:var(--mut)">No spam. We&rsquo;ll only email you about BotCost updates.</div>'
+    + '</div>' : "";
+
+  return '<div class="report">'
+    + '<div class="hero">'
+    + '<div class="hero-lbl">ESTIMATED MONTHLY WASTE FROM AI BOTS</div>'
+    + '<div class="hero-num" style="color:' + (noBots?"var(--grn)":"var(--red)") + '">' + (noBots?"$0.00":fc(cost.monthly)) + '</div>'
+    + '<div class="hero-sub">' + (noBots?"No known AI bots detected":(anal.pct+"% of traffic is non-human &middot; " + fc(cost.annual) + "/yr projected")) + '</div>'
+    + '<div class="hero-file">' + esc(name) + '</div>'
+    + '</div>'
+    + statsHtml + chartHtml + tblHtml + costHtml + waitlistHtml
+    + '<div class="cta-box">'
+    + '<div class="cta-t">' + (noBots?"Log analyzed":"Stop paying for bot traffic") + '</div>'
+    + '<div class="cta-s">' + (noBots?"No known AI bots found. Try a different log file or date range.":"Generate a ready-to-paste WAF rule for Cloudflare, Nginx, or Next.js.") + '</div>'
+    + (!noBots?'<button class="btn-r" id="waf-btn">GENERATE WAF RULES &rarr;</button>':"")
+    + '<button class="btn-g" id="reset-btn">Analyze another file</button>'
+    + '</div></div>';
+}
+
+function tplWaf() {
+  var allBlock = BOTS.filter(function(b){return b.action === "block";});
+  var detected = result.anal.breakdown.filter(function(b){return b.bot.action === "block";}).map(function(b){return b.bot;});
+  var detIds = {};
+  detected.forEach(function(b){detIds[b.id] = true;});
+  var extras = allBlock.filter(function(b){return !detIds[b.id];});
+  var botsToBlock = wafAll ? allBlock : detected;
+  var rules = genRules(botsToBlock);
+  var platforms = [
+    {id:"cfFree", label:"Cloudflare Free", note:"1 rule - fits free 5-rule limit"},
+    {id:"cfPro",  label:"Cloudflare Pro",  note:"per-category rules"},
+    {id:"nginx",  label:"Nginx",           note:"nginx.conf map directive"},
+    {id:"nextjs", label:"Next.js",         note:"middleware.ts"},
+    {id:"robots", label:"robots.txt",      note:"advisory only"}
+  ];
+  var code = rules[wafPlat] || rules.cfFree;
+  var tabs = "";
+  platforms.forEach(function(p) {
+    tabs += '<button class="tab-btn' + (wafPlat===p.id?" active":"") + '" data-plat="' + p.id + '">' + p.label + '</button>';
+  });
+  var curPlat = null;
+  platforms.forEach(function(p){if(p.id===wafPlat)curPlat=p;});
+  if (!curPlat) curPlat = platforms[0];
+  var note = "";
+  if (wafPlat === "cfFree") note = '<div class="note-a">Cloudflare Dashboard &rarr; Security &rarr; WAF &rarr; Custom Rules &rarr; Create rule. Paste expression, set Action to <strong>Block</strong>.</div>';
+  if (wafPlat === "cfPro")  note = '<div class="note-b">Create one rule per block. Lets you toggle training vs SEO bots independently.</div>';
+  if (wafPlat === "robots") note = '<div class="note-a"><strong>Advisory only.</strong> Bytespider and some scrapers ignore robots.txt. Use Cloudflare or Nginx for actual blocking.</div>';
+
+  var chips = "";
+  botsToBlock.forEach(function(b){chips += '<span class="chip">' + esc(b.name) + '</span>';});
+  var extraNote = (!wafAll && extras.length)
+    ? '<div class="extra-n">+' + extras.length + ' more recommended bots not seen in this log.</div>'
+    : "";
+
+  return '<div class="waf-page">'
+    + '<button class="back-btn" id="back-btn">&larr; back to report</button>'
+    + '<div style="font-family:var(--mono);font-size:11px;color:var(--mut);letter-spacing:.1em;margin-bottom:6px">WAF RULE GENERATOR</div>'
+    + '<div class="waf-t">Your block rules</div>'
+    + '<div class="waf-s">Generated from bots detected in your log. Copy and paste into your infrastructure.</div>'
+    + '<div class="chips-box">'
+    + '<div class="chips-hd">'
+    + '<div class="chips-lbl">BLOCKING ' + botsToBlock.length + ' BOTS</div>'
+    + '<label class="chips-tog"><input type="checkbox" id="include-all"> Include all ' + allBlock.length + ' recommended</label>'
+    + '</div>'
+    + '<div class="chips-wrap">' + chips + '</div>'
+    + extraNote
+    + '</div>'
+    + '<div class="tabs">' + tabs + '</div>'
+    + '<div class="code-box">'
+    + '<div class="code-bar"><span class="code-note">' + curPlat.note + '</span><button class="copy-btn" id="copy-btn">Copy</button></div>'
+    + '<pre id="code-pre">' + esc(code) + '</pre>'
+    + '</div>'
+    + note
+    + '<div class="done-box">'
+    + '<div style="font-size:17px;font-weight:600;margin-bottom:6px">Rules ready to deploy.</div>'
+    + '<div style="color:var(--mut);font-size:13px;margin-bottom:16px;line-height:1.5">Want auto-updates when bot IPs change? That is the sync API - Phase 2.</div>'
+    + '<button class="btn-g" id="reset-btn2">Analyze another file</button>'
+    + '</div></div>';
+}
+
+function tplError() {
+  return '<div class="err-page">'
+    + '<div class="err-lbl">ERROR</div>'
+    + '<div class="err-msg">' + esc(errMsg || "Could not process this file.") + '</div>'
+    + '<button class="demo-btn" id="demo-btn">Try demo instead</button>'
+    + '</div>';
+}
+
+// Start
+render();
+</script>
+</body>
+</html>

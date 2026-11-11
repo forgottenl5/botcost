@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BotCost.dev — Stop AI Bots From Eating Your Bandwidth</title>
+<meta name="description" content="Free tool to analyze your server logs and see exactly which AI bots are costing you bandwidth. Works with Nginx, Apache, Cloudflare, and Vercel. Nothing uploaded.">
+<meta name="keywords" content="AI bot bandwidth cost, reduce Vercel bill, Cloudflare egress cost, GPTBot blocker, AI crawler analyzer, block AI bots">
+<meta property="og:title" content="BotCost.dev - See what AI bots are costing your site">
+<meta property="og:description" content="Free browser-based log analyzer. See which AI bots are hitting you and what it costs. Generate WAF rules instantly.">
+<meta property="og:url" content="https://botcost.dev">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="BotCost.dev - See what AI bots are costing your site">
+<meta name="twitter:description" content="Free tool to see which AI bots are eating your bandwidth. Upload your log, get results in seconds. Nothing uploaded.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"></noscript>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#080b0f;--surface:#0d1117;--surface2:#131920;--border:#1e2a38;
+  --red:#e63946;--green:#2ecc71;--amber:#f59e0b;
+  --text:#e8edf2;--muted:#5a7080;
+  --mono:'IBM Plex Mono',monospace;--sans:'IBM Plex Sans',sans-serif;
+}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--text);font-family:var(--sans);font-size:16px;line-height:1.6;overflow-x:hidden}
+body::before{
+  content:'';position:fixed;inset:0;
+  background-image:linear-gradient(rgba(30,42,56,0.3) 1px,transparent 1px),linear-gradient(90deg,rgba(30,42,56,0.3) 1px,transparent 1px);
+  background-size:40px 40px;pointer-events:none;z-index:0;
+}
+section,nav,footer,.stats{position:relative;z-index:1}
+
+nav{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:20px 40px;border-bottom:1px solid var(--border);
+  background:rgba(8,11,15,0.85);backdrop-filter:blur(12px);
+  position:sticky;top:0;z-index:100;
+}
+.logo{font-family:var(--mono);font-size:14px;font-weight:600;letter-spacing:0.05em}
+.logo span{color:var(--red)}
+.nav-badge{font-family:var(--mono);font-size:11px;background:rgba(230,57,70,0.1);border:1px solid rgba(230,57,70,0.3);color:var(--red);padding:4px 10px;border-radius:4px}
+
+.hero{max-width:860px;margin:0 auto;padding:100px 40px 80px;text-align:center}
+.threat-badge{
+  display:inline-flex;align-items:center;gap:8px;
+  font-family:var(--mono);font-size:11px;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--red);background:rgba(230,57,70,0.08);border:1px solid rgba(230,57,70,0.25);
+  padding:6px 14px;border-radius:3px;margin-bottom:36px;
+}
+.pulse{width:7px;height:7px;border-radius:50%;background:var(--red);animation:pulse 1.4s ease-in-out infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(0.8)}}
+
+h1{font-family:var(--sans);font-size:clamp(38px,6vw,68px);font-weight:600;line-height:1.05;letter-spacing:-0.03em;margin-bottom:24px}
+h1 em{font-style:normal;color:var(--red)}
+.sub{font-size:clamp(16px,2vw,20px);font-weight:300;color:#8a9fb0;max-width:600px;margin:0 auto 52px;line-height:1.6}
+
+.counter-row{display:flex;align-items:center;justify-content:center;gap:8px;font-family:var(--mono);font-size:13px;color:var(--muted);margin-bottom:48px}
+.counter-num{font-size:22px;font-weight:600;color:var(--red);min-width:110px;text-align:center}
+
+.form-wrap{display:flex;gap:0;max-width:480px;margin:0 auto 16px;border:1px solid var(--border);border-radius:6px;overflow:hidden;transition:border-color 0.2s}
+.form-wrap:focus-within{border-color:rgba(230,57,70,0.5)}
+.form-wrap input{flex:1;background:var(--surface);border:none;outline:none;padding:14px 18px;font-family:var(--sans);font-size:15px;color:var(--text)}
+.form-wrap input::placeholder{color:var(--muted)}
+.form-wrap button{background:var(--red);border:none;color:#fff;padding:14px 22px;font-family:var(--mono);font-size:12px;font-weight:500;letter-spacing:0.04em;cursor:pointer;white-space:nowrap;transition:background 0.15s}
+.form-wrap button:hover{background:#c8303c}
+.form-note{font-family:var(--mono);font-size:11px;color:var(--muted);text-align:center}
+.success-msg{display:none;font-family:var(--mono);font-size:13px;color:var(--green);text-align:center;padding:14px;border:1px solid rgba(46,204,113,0.2);border-radius:6px;max-width:480px;margin:0 auto 16px;background:rgba(46,204,113,0.05)}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:8px;max-width:860px;margin:80px auto;overflow:hidden}
+.stat{background:var(--surface);padding:32px 28px}
+.stat-num{font-family:var(--mono);font-size:36px;font-weight:600;color:var(--red);display:block;margin-bottom:8px}
+.stat-label{font-size:13px;color:var(--muted);line-height:1.5}
+
+.terminal-section{max-width:860px;margin:0 auto;padding:0 40px 80px}
+.terminal-section h2,.how h2,.pricing h2{font-size:28px;font-weight:500;letter-spacing:-0.02em;margin-bottom:8px}
+.terminal-section > p{color:#8a9fb0;margin-bottom:28px;font-size:15px}
+.terminal{background:#050709;border:1px solid var(--border);border-radius:8px;overflow:hidden}
+.terminal-bar{display:flex;align-items:center;gap:8px;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border)}
+.dot{width:10px;height:10px;border-radius:50%}
+.dot.r{background:#e63946}.dot.y{background:#f59e0b}.dot.g{background:#2ecc71}
+.terminal-label{font-family:var(--mono);font-size:11px;color:var(--muted);margin-left:auto}
+.terminal-body{padding:24px;font-family:var(--mono);font-size:13px;line-height:1.9}
+.t-dim{color:var(--muted)}.t-red{color:var(--red)}.t-green{color:var(--green)}.t-amber{color:var(--amber)}.t-white{color:var(--text)}
+.t-line{display:flex;gap:16px}
+.t-key{color:#5a7080;min-width:200px}
+
+.how{max-width:860px;margin:0 auto;padding:0 40px 80px}
+.how h2{margin-bottom:40px}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+.step{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:28px}
+.step-num{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--red);letter-spacing:0.1em;margin-bottom:12px}
+.step h3{font-size:16px;font-weight:500;margin-bottom:8px}
+.step p{font-size:13px;color:var(--muted);line-height:1.6}
+.step-code{display:block;margin-top:14px;font-family:var(--mono);font-size:11px;background:var(--surface2);padding:10px 12px;border-radius:4px;color:#64a4d4;border-left:2px solid rgba(100,164,212,0.3)}
+
+.pricing{max-width:860px;margin:0 auto;padding:0 40px 80px}
+.pricing h2{margin-bottom:40px}
+.tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.tier{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:28px}
+.tier.featured{border-color:rgba(230,57,70,0.4);background:rgba(230,57,70,0.04)}
+.stat,.step,.tier{will-change:transform}
+.tier-name{font-family:var(--mono);font-size:11px;letter-spacing:0.1em;color:var(--muted);margin-bottom:12px;text-transform:uppercase}
+.tier-price{font-family:var(--mono);font-size:32px;font-weight:600;margin-bottom:4px}
+.tier-price sub{font-size:14px;font-weight:400;color:var(--muted)}
+.tier-limit{font-size:12px;color:var(--muted);margin-bottom:20px;padding-bottom:20px;border-bottom:1px solid var(--border)}
+.tier ul{list-style:none;font-size:13px;color:#8a9fb0}
+.tier ul li{padding:4px 0;display:flex;gap:8px;align-items:flex-start}
+.tier ul li::before{content:'→';color:var(--red);flex-shrink:0}
+
+.cta-section{text-align:center;padding:80px 40px;border-top:1px solid var(--border);background:linear-gradient(180deg,transparent,rgba(230,57,70,0.03))}
+.cta-section h2{font-size:32px;font-weight:500;margin-bottom:12px;letter-spacing:-0.02em}
+.cta-section > p{color:#8a9fb0;margin-bottom:36px}
+
+footer{padding:24px 40px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;font-family:var(--mono);font-size:11px;color:var(--muted)}
+
+@media(max-width:640px){
+  .stats,.steps,.tiers{grid-template-columns:1fr}
+  nav{padding:16px 20px}
+  .hero{padding:60px 20px 60px}
+  .terminal-section,.how,.pricing{padding-left:20px;padding-right:20px}
+}
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">BotCost<span>.</span>dev</div>
+  <div class="nav-badge">● BETA</div>
+</nav>
+
+<section class="hero">
+  <div class="threat-badge">
+    <span class="pulse"></span>
+    19 known AI bot fingerprints · Free analyzer · Nothing uploaded
+  </div>
+  <h1>AI Bots Are <em>Eating</em><br>Your Bandwidth</h1>
+  <p class="sub">GPTBot, ClaudeBot, Perplexity — they're crawling your site 24/7. Find out exactly how much it's costing you, then block them with one line of code.</p>
+<a href="analyze.html" style="display:inline-block;background:var(--red);color:#fff;text-decoration:none;padding:16px 32px;font-family:var(--mono);font-size:13px;font-weight:500;letter-spacing:0.04em;border-radius:6px;margin-bottom:16px">
+  ANALYZE YOUR LOGS FREE →
+</a>
+<div class="form-note">No account required · Nothing uploaded · Results in seconds</div>
+</section>
+
+<div class="stats" style="padding:0 40px;max-width:calc(860px + 80px)">
+  <div class="stat" style="max-width:none">
+    <span class="stat-num">19</span>
+    <div class="stat-label">AI crawler fingerprints tracked, from GPTBot and ClaudeBot to Bytespider and CCBot.</div>
+  </div>
+  <div class="stat">
+    <span class="stat-num">0 bytes</span>
+    <div class="stat-label">of your log uploaded. Analysis runs entirely in your browser.</div>
+  </div>
+  <div class="stat">
+    <span class="stat-num">5</span>
+    <div class="stat-label">ready-to-paste rule formats: Cloudflare Free and Pro, Nginx, Next.js and robots.txt.</div>
+  </div>
+</div>
+
+
+<section class="how">
+  <h2>How it works</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01 — UPLOAD</div>
+      <h3>Drop your log file</h3>
+      <p>Drag and drop your Nginx, Apache, Cloudflare,
+      or Vercel log file. Everything stays in your
+      browser — nothing is uploaded.</p>
+      <code class="step-code">access.log · access.csv ·
+      vercel-logs.json</code>
+    </div>
+    <div class="step">
+      <div class="step-num">02 — ANALYZE</div>
+      <h3>See exactly who is hitting you</h3>
+      <p>We match every request against 19 known AI bot
+      fingerprints and calculate the real bandwidth cost
+      in dollars.</p>
+      <code class="step-code">GPTBot · ClaudeBot ·
+      Bytespider · CCBot + 14 more</code>
+    </div>
+    <div class="step">
+      <div class="step-num">03 — BLOCK</div>
+      <h3>Get your block rule</h3>
+      <p>Generate a ready-to-paste WAF rule for
+      Cloudflare, Nginx, or Next.js. Copy, paste,
+      done.</p>
+      <code class="step-code">Cloudflare WAF · Nginx ·
+      Next.js · robots.txt</code>
+    </div>
+  </div>
+</section>
+
+<section class="cta-section">
+  <h2>Try the free analyzer</h2>
+  <p>Upload your server log and see exactly which AI bots are hitting your site and what it costs. No account required.</p>
+  <a href="analyze.html" style="display:inline-block;background:var(--red);color:#fff;text-decoration:none;padding:16px 32px;font-family:var(--mono);font-size:13px;font-weight:500;letter-spacing:0.04em;border-radius:6px;margin-bottom:16px">
+  ANALYZE YOUR LOGS FREE →
+</a>
+<div class="form-note">Free · No account · Works on Nginx, Cloudflare, Vercel</div>
+</section>
+
+<footer>
+  <span>BotCost.dev — Know what AI bots are costing you</span>
+  <span>© 2026</span>
+</footer>
+
+</body>
+</html>
