@@ -13,7 +13,14 @@ Live: https://botcost.dev
 
 ## Privacy
 
-Log analysis runs entirely in your browser. The log file is read with the FileReader API and never sent anywhere. The only network request the app makes is the optional email sign-up, which sends just the email address.
+Log analysis runs entirely in your browser. The log file is read with the FileReader API and never sent anywhere. Apart from loading web fonts from Google Fonts, the only network request the app makes is the optional email sign-up, which sends just the email address.
+
+### Email waitlist
+
+- Optional. Nothing is sent unless you type your email and press Notify me.
+- Stored: your email address and the date you signed up, in a Cloudflare D1 database. Nothing else (no IP address, no log data, no tracking).
+- Used only to email you about BotCost updates. Never sold or shared.
+- To be removed, reply to any update email and your address will be deleted.
 
 ## Project layout
 
